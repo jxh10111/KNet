@@ -1,0 +1,13 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+
+      {
+        "name": "Python: Run main as Module",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "main",
+        "cwd": "${workspaceFolder}/src/"
+      }
+    ]
+    }
