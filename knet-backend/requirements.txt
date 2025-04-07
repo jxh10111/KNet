@@ -1,0 +1,7 @@
+deepchem==2.7.1
+tensorflow==2.11.0
+# tensorrt==8.6.0
+fastapi
+uvicorn
+sqlmodel
+rdkit
