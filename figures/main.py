@@ -77,7 +77,7 @@ tqdm.pandas(desc="SMILES→Fingerprint")
 # -------------------------------
 records = []
 for lib_name, path in files.items():
-    # detect delimiter
+    # 1) detect delimiter
     with open(path, newline='') as f:
         sample = f.read(4096)
         try:
@@ -88,24 +88,24 @@ for lib_name, path in files.items():
     df = pd.read_csv(path, sep=delim)
     df['library'] = lib_name
 
-    # rename first column to Canonical_Smiles
+    # 2) rename first column to Canonical_Smiles
     first_col = df.columns[0]
     df = df.rename(columns={first_col: 'Canonical_Smiles'})
 
-    # identify kinase columns
+    # 3) identify kinase columns
     kin_cols = [c for c in df.columns if c not in ('Canonical_Smiles','library')]
 
-    # coerce to numeric & drop invalid
+    # 4) coerce to numeric & drop invalid
     kin_num = df[kin_cols].apply(pd.to_numeric, errors='coerce')
     valid = kin_num.notnull().all(axis=1)
     df = df.loc[valid].reset_index(drop=True)
     kin_num = kin_num.loc[valid].reset_index(drop=True)
 
-    # binarize & compute GINI
+    # 5) binarize & compute GINI
     kin_bin = (kin_num >= activity_cutoff).astype(int)
     gini_s = kin_bin.apply(gini_coefficient, axis=1)
 
-    # assemble cleaned record
+    # 6) assemble cleaned record
     rec = pd.concat([
         df[['Canonical_Smiles','library']].reset_index(drop=True),
         kin_bin.reset_index(drop=True),
@@ -133,16 +133,21 @@ fp_matrix = np.vstack(data['fp'].values)
 N = fp_matrix.shape[0]
 
 # -------------------------------
-# Stage 1: Micro‑clustering (exactly 10 compounds each)
+# Stage 1: Micro‑clustering (allowing small overflow)
 # -------------------------------
-print("Starting micro‑clustering (size=10); this may take a while", end="", flush=True)
-spinner = Spinner(interval=10)  
+# Determine number of micro‑clusters and max size
+n_micro = N // micro_size
+size_max = int(np.ceil(N / n_micro))
+print(f"Clustering {N} compounds into {n_micro} micro‑clusters of size between "
+      f"{micro_size} and {size_max}.")
+print("Starting micro‑clustering; this may take a while", end="", flush=True)
+spinner = Spinner(interval=10)
 spinner.start()
 
 k_micro = KMeansConstrained(
-    n_clusters=N // micro_size,
+    n_clusters=n_micro,
     size_min=micro_size,
-    size_max=micro_size,
+    size_max=size_max,
     random_state=42,
     verbose=1
 )
@@ -155,15 +160,15 @@ data['micro_cluster'] = micro_labels
 # compute micro‑centroids & GINI
 centroids = np.vstack([
     fp_matrix[micro_labels == i].mean(axis=0)
-    for i in range(N // micro_size)
+    for i in range(n_micro)
 ])
 micro_gini = np.array([
     data.loc[data['micro_cluster'] == i, 'gini'].mean()
-    for i in range(N // micro_size)
+    for i in range(n_micro)
 ])
 
 # -------------------------------
-# Stage 2: Macro‑clustering (exactly 10 clusters)
+# Stage 2: Macro‑clustering (exactly n_macro clusters)
 # -------------------------------
 print("Starting macro‑clustering (10 clusters)…")
 k_macro = KMeans(
@@ -217,7 +222,7 @@ proba = bgmm.fit_predict_proba(centroids)
 sim = proba[:, 0]
 
 cc = pd.DataFrame({
-    'micro': np.arange(N // micro_size),
+    'micro': np.arange(n_micro),
     'macro': macro_labels,
     'gini': micro_gini,
     'sim': sim
