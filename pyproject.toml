@@ -11,6 +11,8 @@ rdkit = "^2024.9.6"
 seaborn = "^0.13.2"
 scikit-learn = "^1.6.1"
 fsspec = "^2025.3.2"
+k-means-constrained = "^0.7.5"
+tqdm = "^4.67.1"
 
 
 [build-system]
