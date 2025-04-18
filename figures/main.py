@@ -130,12 +130,12 @@ def load_and_preprocess_single(lib_name, path, activity_cutoff):
 
 
 def do_micro_clustering(fp_matrix, micro_size):
-    """Perform size‑constrained micro‑clustering and return labels & centroids."""
+    """Perform size-constrained micro-clustering and return labels & centroids."""
     N = fp_matrix.shape[0]
     n_micro = max(1, N // micro_size)
     size_max = int(np.ceil(N / n_micro))
 
-    print(f" → Micro‑clustering {N} compounds into {n_micro} clusters", end="", flush=True)
+    print(f" → Micro-clustering {N} compounds into {n_micro} clusters", end="", flush=True)
     spinner = Spinner(interval=10)
     spinner.start()
 
@@ -160,8 +160,8 @@ def do_micro_clustering(fp_matrix, micro_size):
 
 
 def do_macro_clustering(centroids, n_macro):
-    """Cluster the micro‑centroids into exactly `n_macro` macro‑clusters."""
-    print(f" → Macro‑clustering into {n_macro} clusters", end="", flush=True)
+    """Cluster the micro-centroids into exactly `n_macro` macro-clusters."""
+    print(f" → Macro-clustering into {n_macro} clusters", end="", flush=True)
     k_macro = KMeans(n_clusters=n_macro, random_state=42, n_init='auto', verbose=1)
     labels = k_macro.fit_predict(centroids)
     print("  done.\n")
@@ -169,7 +169,7 @@ def do_macro_clustering(centroids, n_macro):
 
 
 def prepare_plot1to4_data(data):
-    """Aggregate mean GINI and pick representative SMILES per macro‑cluster & selectivity."""
+    """Aggregate mean GINI and pick representative SMILES per macro-cluster & selectivity."""
     agg = (
         data.groupby(['cluster','selectivity'])['gini']
             .mean()
@@ -306,7 +306,7 @@ def plot_scatter(lib_name, plot_df):
 
     # move legend outside to the right
     ax.legend(
-        title="Macro‑cluster",
+        title="Macro-cluster",
         bbox_to_anchor=(1.02, 1),
         loc="upper left",
         borderaxespad=0
