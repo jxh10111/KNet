@@ -6,6 +6,7 @@ import multiprocessing
 
 import pandas as pd
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from rdkit import Chem, DataStructs
@@ -188,48 +189,72 @@ def prepare_plot1to4_data(data):
 
 
 def plot_grouped_barplots(lib_name, data, agg, rep_smiles):
-    """Grouped barplot with auto‐sized insets and outside legend."""
-    fig, ax = plt.subplots(figsize=(8,4))
+    """
+    Draw one grouped barplot with embedded 2D structures for a single library,
+    using Seaborn's whitegrid theme and an external legend.
+    """
+    sns.set_theme(style="whitegrid")
 
-    # leave extra room on the right for the legend
-    fig.subplots_adjust(right=0.8)
+    # 1) melt your wide `agg` into long form
+    df_long = (
+        agg
+        .reset_index()                                # cluster becomes a column
+        .melt(id_vars="cluster",                      # unpivot selectivity
+              var_name="Selectivity",
+              value_name="Mean GINI")
+    )
 
-    # draw the bars
-    agg.plot(kind='bar', ax=ax)
-    ax.set_title(f'{lib_name}: Mean GINI by Macro‑cluster & Selectivity')
-    ax.set_xlabel('Macro‑cluster')
-    ax.set_ylabel('Mean GINI')
+    # 2) make the figure & axis
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    # put legend outside at upper left of the padded area
+    # 3) draw the bars
+    sns.barplot(
+        data=df_long,
+        x="cluster", y="Mean GINI", hue="Selectivity",
+        palette="Set2",      # you can choose any seaborn palette
+        alpha=0.6,             # translucent so embedded images show through
+        ci="sd",               # error bars = ±1 sd if you like
+        ax=ax
+    )
+
+    # 4) tidy up labels & title
+    ax.set_title(f"{lib_name}: Mean GINI by Macro-cluster & Selectivity", pad=15)
+    ax.set_xlabel("Macro-cluster")
+    ax.set_ylabel("Mean GINI")
+
+    # 5) move legend outside to the right
     ax.legend(
-        title='Selectivity',
-        loc='upper left',
-        bbox_to_anchor=(1.02, 1.0),
+        title="",
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left",
         borderaxespad=0
     )
 
-    # compute zoom so that for N bars, zoom ~ 2/N but never below 0.3
-    N = len(agg.index)
-    zoom = max(0.3, min(0.6, 2.0 / N))
+    # 6) embed the representative structures under each bar
+    for cluster_id in agg.index:
+        # compute x position of that cluster's bar group:
+        x = list(agg.index).index(cluster_id)
 
-    for c in agg.index:
-        smiles = rep_smiles[c]
-        mol    = Chem.MolFromSmiles(smiles)
-        img    = Draw.MolToImage(mol, size=(80,80))  # slightly smaller base
+        # load your molecule and image
+        smiles = rep_smiles[cluster_id]
+        mol = Chem.MolFromSmiles(smiles)
+        img = Draw.MolToImage(mol, size=(80, 80))  # slightly smaller
 
+        # place it down near y=0 (you can adjust y_offset if needed)
         ab = AnnotationBbox(
-            OffsetImage(img, zoom=zoom),
-            (c, 0),
-            frameon=False,
-            # lift them further above the axis so they clear the bars
-            box_alignment=(0.5, -0.2)
+            OffsetImage(img, zoom=0.4),
+            (x, 0), 
+            xybox=(0, -40),    # shift image down so it sits below the x‑axis
+            xycoords='data',
+            boxcoords="offset points",
+            frameon=False
         )
         ax.add_artist(ab)
 
-    plt.tight_layout()
+    # 7) make room on the right for that legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
+
     plt.show()
-
-
 
 
 def prepare_plot5_data(centroids, micro_gini, macro_labels):
@@ -247,21 +272,49 @@ def prepare_plot5_data(centroids, micro_gini, macro_labels):
 
 
 def plot_scatter(lib_name, plot_df):
-    """Draw the similarity vs. GINI scatter for a single library."""
+    """
+    Draw the similarity vs. GINI scatter for a single library
+    using seaborn.scatterplot and the whitegrid theme.
+    """
+    sns.set_theme(style="whitegrid")
+
     fig, ax = plt.subplots(figsize=(6,6))
-    ax.scatter(
-        plot_df['sim'], plot_df['gini'], c=plot_df['macro'], cmap='tab10', s=100
+
+    # seaborn scatter
+    sns.scatterplot(
+        data=plot_df,
+        x="sim", y="gini",
+        hue="macro",
+        palette="tab10",
+        s=100,
+        ax=ax
     )
+
+    # annotate each point with its cluster label
     for _, row in plot_df.iterrows():
         ax.text(
-            row['sim'], row['gini'], f"C{int(row['macro'])}",
-            ha='center', va='center', fontsize=8, color='white'
+            row['sim'], row['gini'],
+            f"C{int(row['macro'])}",
+            ha='center', va='center',
+            fontsize=8, color='white'
         )
 
-    ax.set_title(f'{lib_name}: Similarity vs. Mean GINI')
-    ax.set_xlabel('Similarity (BGMM P comp 0)')
-    ax.set_ylabel('Mean GINI')
-    plt.tight_layout()
+    # labels & title
+    ax.set_title(f"{lib_name}: Similarity vs. Mean GINI", pad=15)
+    ax.set_xlabel("Similarity (BGMM P comp 0)")
+    ax.set_ylabel("Mean GINI")
+
+    # move legend outside to the right
+    ax.legend(
+        title="Macro‑cluster",
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left",
+        borderaxespad=0
+    )
+
+    # tighten up but leave room on the right for the legend
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
+
     plt.show()
 
 
