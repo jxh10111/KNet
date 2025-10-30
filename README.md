@@ -5,7 +5,7 @@ The KNet server is freely accessible at https://knet.idsc.miami.edu/.
 <img width="637" alt="KNet_Overview" src="https://github.com/user-attachments/assets/e3d917e7-4987-4c12-9758-15d7b15a3f92" />
 
 
-  
+  &ensp;
  
 
 If you use this repository or any associated code, please cite our paper:
